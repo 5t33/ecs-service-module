@@ -19,7 +19,7 @@ resource "aws_ecs_task_definition" "task_def" {
       },
       "portMappings" = list({
         "containerPort" = var.container_port,
-        "hostPort" = 0,
+        "hostPort" = var.host_port,
         "protocol": "tcp"
       })
     })

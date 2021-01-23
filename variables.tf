@@ -3,11 +3,6 @@ variable "aws_region" {
   default     = "us-west-2"
 }
 
-variable "aws_profile" {
-  description = "The Aws profile to use"
-  default     = "default"
-}
-
 #------------------------------------------------------------------------------
 # Misc
 #------------------------------------------------------------------------------
@@ -109,9 +104,28 @@ variable "log_retention_days" {
 # AWS LOAD BALANCER
 #------------------------------------------------------------------------------
 
-variable "listener_arn" {
-  description = "Listener ARN"
+variable "lb_name" {
+  description = "Name of LB to get listener arn from"
+  type = string
+}
+
+variable "listener_port" {
+  description = "Port that the listener will be listening on via he LB"
+  type = number
+  default = 80
+}
+
+
+variable "tg_port" {
+  description = "Port that ECS will recieve traffic on from the LB listener"
   type        = string
+  default = 80
+}
+
+variable "tg_protocol" {
+  description = "Protocol that ECS will recieve traffic via the LB"
+  type        = string
+  default = "HTTP"
 }
 
 variable "tg_health_check_path" {
@@ -203,6 +217,12 @@ variable "container_port" {
   default = 3001
 }
 
+variable "host_port" {
+  description = "Host port. Should be 0 for auto-port assignment." 
+  type = number
+  default = 0
+}
+
 variable "task_cpu" {
   description = "CPU units to be used per task"
   type = number
@@ -237,6 +257,7 @@ variable "tags" {
 # AUTO SCALING
 #------------------------------------------------------------------------------
 
+// Policy
 variable "autoscale_down_policy_type" {
   type        = string
   description = "For DynamoDB, only TargetTrackingScaling is supported. For Amazon ECS, Spot Fleet, and Amazon RDS, both StepScaling and TargetTrackingScaling are supported. For any other service, only StepScaling is supported. Defaults to StepScaling"
@@ -259,6 +280,12 @@ variable "autoscale_down_int_upper" {
   type        = number
   description = "The upper bound for the difference between the alarm threshold and the CloudWatch metric. Without a value, AWS will treat this bound as infinity. The upper bound must be greater than the lower bound."
   default     = 0
+}
+
+variable "scale_down_step" {
+  type        = number
+  description = "The number of members by which to scale down, when the adjustment bounds are breached. A positive value scales up. A negative value scales down."
+  default     = -3
 }
 
 variable "autoscale_up_policy_type" {
@@ -285,54 +312,13 @@ variable "autoscale_up_int_lower" {
   default     = 0
 }
 
-variable "autoscale_up_adj" {
-  type        = number
-  description = "The number of members by which to scale up, when the adjustment bounds are breached. A positive value scales up. A negative value scales down."
-  default     = 1
-}
-
-variable "scale_up_namespace" {
-  type        = string
-  description = "Scale up metric namespace"
-  default     = "AWS/ApplicationELB"
-}
-
-variable "scale_up_threshold" {
-  type        = number
-  description = "Threshold which triggers cloudwatch alarm and therefore autoscale up action when metric value crosses threshold value"
-  default     = 300
-}
-
-variable "scale_up_statistic" {
-  type        = string
-  description = "The statistic to apply to the alarm's associated metric. Either of the following is supported: SampleCount, Average, Sum, Minimum, Maximum"
-  default     = "Sum"
-}
-
-variable "scale_up_period" {
-  type        = string
-  description = "The period length applied to the scale up statistic metric"
-  default     = "60"
-}
-
-variable "scale_up_evaluation_periods" {
-  type        = string
-  description = "The number of periods evaluated by the scale up statistic metric"
-  default     = "1"
-}
-
-variable "scale_up_datapoints_to_alarm" {
-  type        = string
-  description = "The number of datapoints that must be breaching to cause the scale up metric to be in alarm"
-  default     = "1"
-}
-
 variable "scale_up_step" {
   type        = number
   description = "The number of members by which to scale down, when the adjustment bounds are breached. A positive value scales up. A negative value scales down."
   default     = 3
 }
 
+// Metric (scale up)
 variable "scale_up_metric" {
   type        = string
   description = "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-cloudwatch-metrics.html"
@@ -345,59 +331,50 @@ variable "scale_up_comparison_operator" {
   default     = "GreaterThanOrEqualToThreshold"
 }
 
+variable "scale_up_threshold" {
+  type        = number
+  description = "Threshold which triggers cloudwatch alarm and therefore autoscale up action when metric value crosses threshold value"
+  default     = 300
+}
+
 variable "scale_up_treat_missing_data" {
   type        = string
   description = "scale up treat missing data"
   default     = "notBreaching"
 }
 
-variable "service_max_task_count" {
-  type        = number
-  description = "The maximum value to scale to in response to a scale-out event. MaxCapacity is required to register a scalable target."
-  default     = 20
-}
-
-variable "scale_down_namespace" {
-  type        = string
-  description = "Scale down metric namespace"
-  default     = "AWS/ApplicationELB"
-}
-
-variable "scale_down_threshold" {
-  type        = number
-  description = "Threshold which triggers cloudwatch alarm and therefore autoscale down action when metric value crosses threshold value"
-  default     = 100
-}
-
-variable "scale_down_statistic" {
+variable "scale_up_statistic" {
   type        = string
   description = "The statistic to apply to the alarm's associated metric. Either of the following is supported: SampleCount, Average, Sum, Minimum, Maximum"
   default     = "Sum"
 }
 
-variable "scale_down_period" {
-  type        = string
-  description = "The period length applied to the scale down statistic metric"
-  default     = "60"
-}
-
-variable "scale_down_evaluation_periods" {
-  type        = string
-  description = "The number of periods evaluated by the scale down statistic metric"
-  default     = "1"
-}
-
-variable "scale_down_datapoints_to_alarm" {
-  type        = string
-  description = "The number of datapoints that must be breaching to cause the scale down metric to be in alarm"
-  default     = "1"
-}
-
-variable "scale_down_step" {
+variable "scale_up_period" {
   type        = number
-  description = "The number of members by which to scale down, when the adjustment bounds are breached. A positive value scales up. A negative value scales down."
-  default     = -3
+  description = "The period length applied to the scale up statistic metric"
+  default     = 60
 }
+
+variable "scale_up_evaluation_periods" {
+  type        = number
+  description = "The number of periods evaluated by the scale up statistic metric"
+  default     = 1
+}
+
+variable "scale_up_datapoints_to_alarm" {
+  type        = number
+  description = "The number of datapoints that must be breaching to cause the scale up metric to be in alarm"
+  default     = 1
+}
+
+variable "scale_up_namespace" {
+  type        = string
+  description = "Scale up metric namespace"
+  default     = "AWS/ApplicationELB"
+}
+
+
+// Metric (scale down)
 
 variable "scale_down_metric" {
   type        = string
@@ -411,12 +388,54 @@ variable "scale_down_comparison_operator" {
   default     = "LessThanOrEqualToThreshold"
 }
 
+variable "scale_down_threshold" {
+  type        = number
+  description = "Threshold which triggers cloudwatch alarm and therefore autoscale down action when metric value crosses threshold value"
+  default     = 100
+}
+
 variable "scale_down_treat_missing_data" {
   type        = string
   description = "scale down treat missing data"
   default     = "breaching"
 }
 
+variable "scale_down_statistic" {
+  type        = string
+  description = "The statistic to apply to the alarm's associated metric. Either of the following is supported: SampleCount, Average, Sum, Minimum, Maximum"
+  default     = "Sum"
+}
+
+variable "scale_down_period" {
+  type        = number
+  description = "The period length applied to the scale down statistic metric"
+  default     = 60
+}
+
+variable "scale_down_evaluation_periods" {
+  type        = number
+  description = "The number of periods evaluated by the scale down statistic metric"
+  default     = 1
+}
+
+variable "scale_down_datapoints_to_alarm" {
+  type        = number
+  description = "The number of datapoints that must be breaching to cause the scale down metric to be in alarm"
+  default     = 1
+}
+
+variable "scale_down_namespace" {
+  type        = string
+  description = "Scale down metric namespace"
+  default     = "AWS/ApplicationELB"
+}
+
+// Target
+variable "service_max_task_count" {
+  type        = number
+  description = "The maximum value to scale to in response to a scale-out event. MaxCapacity is required to register a scalable target."
+  default     = 20
+}
 
 variable "service_min_task_count" {
   type        = number

@@ -4,7 +4,7 @@ resource "aws_cloudwatch_metric_alarm" "service_high_req" {
   metric_name         = var.scale_up_metric
   comparison_operator = var.scale_up_comparison_operator 
   threshold           = var.scale_up_threshold
-  treat_missing_data  = var.scale_up_treat_missing_data //TODO: make variable with default
+  treat_missing_data  = var.scale_up_treat_missing_data
   statistic           = var.scale_up_statistic
   period              = var.scale_up_period
   evaluation_periods  = var.scale_up_evaluation_periods 

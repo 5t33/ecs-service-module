@@ -11,14 +11,23 @@ data "aws_iam_role" "ecs_service_role" {
   name = var.ecs_service_role_name
 }
 
+
 #------------------------------------------------------------------------------
 # AWS LOAD BALANCER
 #------------------------------------------------------------------------------
+data "aws_lb" "selected" {
+  name = var.lb_name
+}
+
+data "aws_lb_listener" "selected" {
+  load_balancer_arn = data.aws_lb.selected.arn
+  port              = var.listener_port
+}
 
 resource "aws_lb_target_group" "lb_http_target_group" {
   name = "tg-${local.service_name}"
-  port     = 80
-  protocol = "HTTP"
+  port     = var.tg_port
+  protocol = var.tg_protocol
   vpc_id   = var.vpc_id
   health_check {
     path = var.tg_health_check_path
@@ -34,7 +43,7 @@ resource "aws_lb_listener_rule" "endpoint_listener_rule" {
   depends_on = [
     aws_lb_target_group.lb_http_target_group
   ]
-  listener_arn = var.listener_arn
+  listener_arn = data.aws_lb_listener.selected.arn
   priority     = var.listener_priority
 
   action {
