@@ -1,4 +1,13 @@
 
+variable "aws_short_region" {
+  description = "The short name for an AWS region"
+  default = {
+    us-west-2 = "usw2"
+    eu-west-1 = "euw1"
+    us-east-1 = "use1"
+  }
+}
+
 locals {
   service_name = var.name_override != "" ? var.name_override : "${var.name_preffix}-${var.aws_short_region[var.aws_region]}-${var.environment}"
 }
