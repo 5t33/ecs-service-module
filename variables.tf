@@ -109,13 +109,6 @@ variable "lb_name" {
   type = string
 }
 
-variable "listener_port" {
-  description = "Port that the listener will be listening on via he LB"
-  type = number
-  default = 80
-}
-
-
 variable "tg_port" {
   description = "Port that ECS will recieve traffic on from the LB listener"
   type        = string
