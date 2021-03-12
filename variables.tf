@@ -1,11 +1,18 @@
+
+#------------------------------------------------------------------------------
+# Misc
+#------------------------------------------------------------------------------
+
 variable "aws_region" {
   description = "The Aws region to use"
   default     = "us-west-2"
 }
 
-#------------------------------------------------------------------------------
-# Misc
-#------------------------------------------------------------------------------
+variable "environment" {
+  description = "Environment of the service: tst, stg, prd, etc"
+  default = "tst"
+}
+
 variable "name_preffix" {
   description = "Name preffix for resources on AWS"
   type = string
