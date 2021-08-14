@@ -36,20 +36,18 @@ variable "aws_short_region" {
 }
 
 variable "name_preffix" {
-  description = "Name preffix for resources on AWS."
+  description = "Name preffix for resources on AWS"
   type = string
 }
 
 variable "name_override" {
-  description = "Overrides name generaged from name_preffix, region, and environment."
+  description = "Overrides name generaged from name_preffix, region, and environment"
   default = ""
 }
 
-variable "environment" {
-  description = "Environment."
-  default = "tst"
-}
-
+variable "use_custom_kms" {
+  default = false
+} 
 
 #------------------------------------------------------------------------------
 # IAM
@@ -329,187 +327,116 @@ variable "tags" {
   default = {}
 }
 
-variable "ignore_task_def_after_creation" {
-  description = "Whether to ignore the task definition after creation to be handled by CI/CD"
-  type = bool
-  default = false
-}
 
 #------------------------------------------------------------------------------
 # AUTO SCALING
 #------------------------------------------------------------------------------
 
-// Policy
-variable "autoscale_down_policy_type" {
-  type        = string
-  description = "For DynamoDB, only TargetTrackingScaling is supported. For Amazon ECS, Spot Fleet, and Amazon RDS, both StepScaling and TargetTrackingScaling are supported. For any other service, only StepScaling is supported. Defaults to StepScaling"
-  default     = "StepScaling"
+variable "scaling_policy_type" {
+  type = string
+  default = "StepScaling"
+  validation {
+    condition = var.scaling_policy_type == "StepScaling"
+    error_message = "Currently only StepScaling is supported."
+  }
 }
 
-variable "autoscale_down_metric_adj_type" {
-  type        = string
-  description = "Specifies whether the adjustment is an absolute number or a percentage of the current capacity. Valid values are ChangeInCapacity, ExactCapacity, and PercentChangeInCapacity"
-  default     = "ChangeInCapacity"
+variable "scale_up_metric_alarms" {
+  type = list(object({
+      metric = string
+      comparison_operator = string
+      threshold = number
+      treat_missing_data = string
+      statistic = string
+      period = number
+      evaluation_periods = number
+      datapoints_to_alarm = number
+      dimensions = map(string)
+      namespace = string
+      tags = map(string)
+      metric_queries = list(object({
+        id = string
+        expression = string 
+        label = string
+        return_data = string
+        metric = object({
+          metric_name = string
+          namespace   = string
+          period      = number
+          stat        = string
+          unit        = string
+          dimensions = map(string)
+        })
+      }))
+    }))
+  default = []
 }
 
-variable "autoscale_down_cooldown" {
-  type        = number
-  description = "The amount of time, in seconds, after a scaling activity completes and before the next scaling activity can start."
-  default     = 60
+variable "scale_down_metric_alarms" {
+  type = list(object({
+    metric = string
+    comparison_operator = string
+    threshold = number
+    treat_missing_data = string
+    statistic = string
+    period = number
+    evaluation_periods = number
+    datapoints_to_alarm = number
+    dimensions = map(string)
+    namespace = string
+    tags = map(string)
+    metric_queries = list(object({
+      id = string
+      expression = string 
+      label = string
+      return_data = string
+      metric = object({
+        metric_name = string
+        namespace   = string
+        period      = number
+        stat        = string
+        unit        = string
+        dimensions = map(string)
+      })
+    }))
+  }))
+  default = []
 }
 
-variable "autoscale_down_int_upper" {
-  type        = number
-  description = "The upper bound for the difference between the alarm threshold and the CloudWatch metric. Without a value, AWS will treat this bound as infinity. The upper bound must be greater than the lower bound."
-  default     = 0
-}
-
-variable "scale_down_step" {
-  type        = number
-  description = "The number of members by which to scale down, when the adjustment bounds are breached. A positive value scales up. A negative value scales down."
-  default     = -1
-}
-
-variable "autoscale_up_policy_type" {
-  type        = string
-  description = "For DynamoDB, only TargetTrackingScaling is supported. For Amazon ECS, Spot Fleet, and Amazon RDS, both StepScaling and TargetTrackingScaling are supported. For any other service, only StepScaling is supported. Defaults to StepScaling"
-  default     = "StepScaling"
-}
-
-variable "autoscale_up_metric_adj_type" {
-  type        = string
-  description = "Specifies whether the adjustment is an absolute number or a percentage of the current capacity. Valid values are ChangeInCapacity, ExactCapacity, and PercentChangeInCapacity"
-  default     = "ChangeInCapacity"
-}
-
-variable "autoscale_up_cooldown" {
-  type        = number
-  description = "The amount of time, in seconds, after a scaling activity completes and before the next scaling activity can start."
-  default     = 60
-}
-
-variable "autoscale_up_int_lower" {
-  type        = number
-  description = "The lower bound for the difference between the alarm threshold and the CloudWatch metric. Without a value, AWS will treat this bound as negative infinity."
-  default     = 0
-}
-
-variable "scale_up_step" {
-  type        = number
-  description = "The number of members by which to scale down, when the adjustment bounds are breached. A positive value scales up. A negative value scales down."
-  default     = 1
-}
-
-// Metric (scale up)
-variable "scale_up_metric" {
-  type        = string
-  description = "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-cloudwatch-metrics.html"
-  default     = "RequestCountPerTarget"
-}
-
-variable "scale_up_comparison_operator" {
-  type        = string
-  description = "scale up comparison operator"
-  default     = "GreaterThanOrEqualToThreshold"
-}
-
-variable "scale_up_threshold" {
-  type        = number
-  description = "Threshold which triggers cloudwatch alarm and therefore autoscale up action when metric value crosses threshold value"
-  default     = 300
-}
-
-variable "scale_up_treat_missing_data" {
-  type        = string
-  description = "scale up treat missing data"
-  default     = "notBreaching"
-}
-
-variable "scale_up_statistic" {
-  type        = string
-  description = "The statistic to apply to the alarm's associated metric. Either of the following is supported: SampleCount, Average, Sum, Minimum, Maximum"
-  default     = "Sum"
-}
-
-variable "scale_up_period" {
-  type        = number
-  description = "The period length applied to the scale up statistic metric"
-  default     = 60
-}
-
-variable "scale_up_evaluation_periods" {
-  type        = number
-  description = "The number of periods evaluated by the scale up statistic metric"
-  default     = 1
-}
-
-variable "scale_up_datapoints_to_alarm" {
-  type        = number
-  description = "The number of datapoints that must be breaching to cause the scale up metric to be in alarm"
-  default     = 1
-}
-
-variable "scale_up_namespace" {
-  type        = string
-  description = "Scale up metric namespace"
-  default     = "AWS/ApplicationELB"
-}
-
-
-// Metric (scale down)
-
-variable "scale_down_metric" {
-  type        = string
-  description = "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-cloudwatch-metrics.html"
-  default     = "RequestCountPerTarget"
-}
-
-variable "scale_down_comparison_operator" {
-  type        = string
-  description = "scale down comparison operator"
-  default     = "LessThanOrEqualToThreshold"
-}
-
-variable "scale_down_threshold" {
-  type        = number
-  description = "Threshold which triggers cloudwatch alarm and therefore autoscale down action when metric value crosses threshold value"
-  default     = 100
-}
-
-variable "scale_down_treat_missing_data" {
-  type        = string
-  description = "scale down treat missing data"
-  default     = "breaching"
-}
-
-variable "scale_down_statistic" {
-  type        = string
-  description = "The statistic to apply to the alarm's associated metric. Either of the following is supported: SampleCount, Average, Sum, Minimum, Maximum"
-  default     = "Sum"
-}
-
-variable "scale_down_period" {
-  type        = number
-  description = "The period length applied to the scale down statistic metric"
-  default     = 60
-}
-
-variable "scale_down_evaluation_periods" {
-  type        = number
-  description = "The number of periods evaluated by the scale down statistic metric"
-  default     = 1
-}
-
-variable "scale_down_datapoints_to_alarm" {
-  type        = number
-  description = "The number of datapoints that must be breaching to cause the scale down metric to be in alarm"
-  default     = 1
-}
-
-variable "scale_down_namespace" {
-  type        = string
-  description = "Scale down metric namespace"
-  default     = "AWS/ApplicationELB"
+variable "step_scaling_policies" {
+  description = "see https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm"
+  type = object({
+    scale_up_policy = object({
+      metric_adj_type = string
+      cooldown = number
+      metric_aggregation_type = string
+      metric_interval_upper_bound = number
+      scale_up_step = number
+    })
+    scale_down_policy = object({
+      metric_adj_type = string
+      cooldown = number
+      metric_aggregation_type = string
+      metric_interval_upper_bound = number
+      scale_down_step = number
+    })
+  })
+  default = {
+    scale_up_policy = {
+      metric_adj_type = "ChangeInCapacity"
+      metric_aggregation_type = "Average"
+      cooldown = 60
+      metric_interval_upper_bound = 0
+      scale_up_step = 1
+    }
+    scale_down_policy = {
+      metric_adj_type = "ChangeInCapacity"
+      metric_aggregation_type = "Average"
+      cooldown = 60
+      metric_interval_upper_bound = 0
+      scale_down_step = 1
+    }
+  }
 }
 
 // Target
@@ -529,4 +456,19 @@ variable "create_autoscaling" {
   type = bool
   description = "Whether or not to create autoscaling for the service."
   default = true
+}
+
+variable "create_task_definition" {
+  type = bool
+  default = true
+}
+
+variable "enable_execute_command" {
+  type = bool
+  default = false
+}
+
+variable "task_role_arn" {
+  type = string
+  default = null
 }

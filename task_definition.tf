@@ -1,5 +1,13 @@
+
+data "aws_ecs_task_definition" "task_def" {
+  count = var.create_task_definition ? 0 : 1
+  task_definition = var.task_definition_family
+}
+
 resource "aws_ecs_task_definition" "task_def" {
+  count = var.create_task_definition ? 1 : 0
   execution_role_arn = var.task_execution_role_arn
+  task_role_arn = var.task_role_arn == null ? var.task_execution_role_arn : var.task_role_arn
   family = var.task_definition_family
   network_mode = var.launch_type == "EC2" ? "bridge" : "awsvpc"
   requires_compatibilities = var.launch_type == "EC2" ? [] : ["FARGATE"]

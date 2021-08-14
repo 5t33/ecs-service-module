@@ -7,7 +7,7 @@ Inspired by:
 
 ```
 module "ecs_service" {
-  source = "git@github.com:5t33/ecs-service-module?ref=v0.1.0alpha" 
+  source = "git@github.com:5t33/ecs-service-module?ref=v0.2.0alpha" 
   // Required variables
 
   // Misc.  
@@ -136,14 +136,14 @@ locals {
 }
 
 module "hello-world" {
-    source = "git@github.com:5t33/ecs-service-module?ref=v0.1.0alpha" 
+    source      = "git@github.com:5t33/ecs-service-module?ref=v0.2.0alpha"
     environment = "tst"
     launch_type = "EC2"
     aws_region  = var.aws_region
     task_execution_role_arn = aws_iam_role.task_role.arn
     name_preffix = "hello-world"
     ecs_cluster_name = "test-temp"
-    vpc_id = var.vpc_id
+    vpc_id = "vpc-ad27b8c4"
     lb_name = "temp-lb"
     path_patterns = [ "/api/v1/hello_world*" ]
     container_name = "hello-world"
@@ -205,7 +205,7 @@ resource "aws_iam_policy" "task_policy" {
           "Resource": "*",
           "Condition": {
               "StringEquals": {
-                "ec2:Vpc": var.vpc_id,
+                "ec2:Vpc": "vpc-053c9c7d",
                 "ec2:Subnet": local.subnet_arns,
                 "ec2:AuthorizedService": "ecs.amazonaws.com"
               }
@@ -269,14 +269,14 @@ locals {
 }
 
 module "hello-world" {
-    source = "git@github.com:5t33/ecs-service-module?ref=v0.1.0alpha" 
+    source      = "git@github.com:5t33/ecs-service-module?ref=v0.2.0alpha"
     environment = "tst"
     launch_type = "FARGATE"
     aws_region  = var.aws_region
     task_execution_role_arn = aws_iam_role.task_role.arn
     name_preffix = "hello-world"
     ecs_cluster_name = "test-temp"
-    vpc_id = var.vpc_id
+    vpc_id = "vpc-ad27b8c4"
     lb_name = "temp-lb"
     path_patterns = [ "/api/v1/hello_world*" ]
     container_name = "hello-world"
@@ -343,7 +343,7 @@ resource "aws_iam_policy" "task_policy" {
           "Resource": "*",
           "Condition": {
               "StringEquals": {
-                "ec2:Vpc": var.vpc_id,
+                "ec2:Vpc": "vpc-053c9c7d",
                 "ec2:Subnet": local.subnet_arns,
                 "ec2:AuthorizedService": "ecs.amazonaws.com"
               }
@@ -387,6 +387,75 @@ resource "aws_iam_role_policy_attachment" "attachment" {
   policy_arn = aws_iam_policy.task_policy.arn
 }
 
+```
+
+## Autoscaling (Untested)
+
+```
+module "hello-world" {
+  ...
+  create_autoscaling = true
+  step_scaling_policies = {
+    scale_up_policy = {
+      metric_adj_type = "ChangeInCapacity"
+      metric_aggregation_type = "Average"
+      cooldown = 60
+      metric_interval_upper_bound = 0
+      scale_up_step = 1
+    }
+    scale_down_policy = {
+      metric_adj_type = "ChangeInCapacity"
+      metric_aggregation_type = "Average"
+      cooldown = 60
+      metric_interval_upper_bound = 0
+      scale_down_step = 1
+    }
+  }
+  scale_up_metric_alarms = [
+    {
+      metric = "CPUUtilization"
+      comparison_operator = "GreaterThanOrEqualToThreshold"
+      threshold = 60
+      treat_missing_data = "missing"
+      statistic = "Average"
+      period = 60
+      datapoints_to_alarm = 1
+      dimensions = {
+        ClusterName = "my-cluster-name",
+        ServiceName = "hello-world"
+      } //todo
+      namespace = "AWS/ECS"
+      tags = {
+        environment = "prd"
+        service = "hello-world"
+        team    = "my-team"
+      }
+      metric_queries = []
+   }
+  ]
+  scale_down_metric_alarms = [
+    {
+      metric = "CPUUtilization"
+      comparison_operator = "LessThanOrEqualToThreshold"
+      threshold = 20
+      treat_missing_data = "missing"
+      statistic = "Average"
+      period = 60
+      datapoints_to_alarm = 3
+      dimensions = {
+        ClusterName = "my-cluster-name",
+        ServiceName = "hello-world"
+      } //todo
+      namespace = "AWS/ECS"
+      tags = {
+        environment = "prd"
+        service = "hello-world"
+        team    = "my-team"
+      }
+      metric_queries = []
+   }
+  ]
+}
 ```
 
 ## TODO:

@@ -70,6 +70,7 @@ resource "aws_lb_listener_rule" "endpoint_listener_rule" {
 #------------------------------------------------------------------------------
 
 resource "aws_kms_key" "log_group_key" {
+  count = var.use_custom_kms ? 1 : 0
   deletion_window_in_days = 30
   enable_key_rotation = true
 
@@ -112,11 +113,10 @@ resource "aws_kms_key" "log_group_key" {
 }
 
 resource "aws_cloudwatch_log_group" "log_group" {
-  depends_on = [aws_kms_key.log_group_key]
   name = local.log_group_name
   tags = var.tags
 
-  kms_key_id = aws_kms_key.log_group_key.arn
+  kms_key_id =  var.use_custom_kms ? aws_kms_key.log_group_key[0].arn : null
   retention_in_days = var.log_retention_days
 }
 
