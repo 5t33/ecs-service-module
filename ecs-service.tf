@@ -185,12 +185,8 @@ resource "aws_ecs_service" "service" {
       security_groups = var.network_configuration.security_groups
     }
   }
-  task_definition = aws_ecs_task_definition.task_def.arn
+  task_definition = var.create_task_definition ? aws_ecs_task_definition.task_def[0].arn : var.task_definition_arn
   tags = merge({
     Name = "${local.service_name}-ecs-tasks-sg"
   }, var.tags)
-}
-
-output "kms_key" {
-  value = aws_kms_key.log_group_key.id
 }

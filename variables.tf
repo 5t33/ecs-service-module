@@ -61,6 +61,7 @@ variable "ecs_service_role_name" {
   description = "iam role for the ecs service (used to communicate with load balancer)."
   default = "AWSServiceRoleForECS"
 }
+
 #------------------------------------------------------------------------------
 # AWS Networking
 #------------------------------------------------------------------------------
@@ -279,6 +280,11 @@ variable "task_definition_family" {
   type = string
 }
 
+variable "task_definition_arn" {
+  description = "(optional) Task definition ARN. Only used if create_task_definiton is false"
+  type = string
+  default = null
+}
 variable "container_name" {
   description = "Name of container that will be running inside the task"
   type = string
