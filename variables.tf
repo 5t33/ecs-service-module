@@ -6,6 +6,10 @@ variable "aws_region" {
   type = string
 }
 
+variable "environment" {
+  type = string
+}
+
 variable "aws_short_region" {
   description = "The short name for an AWS region"
   default = {
