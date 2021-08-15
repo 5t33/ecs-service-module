@@ -7,7 +7,7 @@ Inspired by:
 
 ```
 module "ecs_service" {
-  source = "git@github.com:5t33/ecs-service-module?ref=v0.2.0alpha" 
+  source = "git@github.com:5t33/ecs-service-module?ref=v0.2.1alpha" 
   // Required variables
 
   // Misc.  
@@ -136,7 +136,7 @@ locals {
 }
 
 module "hello-world" {
-    source      = "git@github.com:5t33/ecs-service-module?ref=v0.2.0alpha"
+    source      = "git@github.com:5t33/ecs-service-module?ref=v0.2.1alpha"
     environment = "tst"
     launch_type = "EC2"
     aws_region  = var.aws_region
@@ -269,7 +269,7 @@ locals {
 }
 
 module "hello-world" {
-    source      = "git@github.com:5t33/ecs-service-module?ref=v0.2.0alpha"
+    source      = "git@github.com:5t33/ecs-service-module?ref=v0.2.1alpha"
     environment = "tst"
     launch_type = "FARGATE"
     aws_region  = var.aws_region
