@@ -459,5 +459,5 @@ module "hello-world" {
 ```
 
 ## TODO:
-* Add default CPU utilization, memory utilization, and request count as options for autoscaling metrics in addition to custom
-* Move autoscaling to blocks instead of flat variables
+* Add execute command option
+* Add option for multiple containers in task definition for sidecars
