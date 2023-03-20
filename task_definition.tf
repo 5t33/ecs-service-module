@@ -18,6 +18,7 @@ resource "aws_ecs_task_definition" "task_def" {
     [{
       "name" = var.container_name,
       "image" = var.container_image,
+      # "command": ["bash", "-c", "while true;do echo \"sleeping\"; sleep 10; done;"],
       "cpu" = var.launch_type == "EC2" ? var.task_cpu : null,
       "memory" = var.launch_type == "EC2" ? var.task_memory: null,
       "logConfiguration" = {

@@ -482,3 +482,8 @@ variable "task_role_arn" {
   type = string
   default = null
 }
+
+variable "create_blue_green_deploy_tgs" {
+  type = bool
+  default = false
+}

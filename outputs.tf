@@ -44,10 +44,30 @@ output "service_max_task_count" {
 
 output "target_group_arn" {
   description = "Arn of the ervice's target group"
-  value = var.create_load_balancing ? aws_lb_target_group.lb_http_target_group[0].arn : null
+  value = var.create_load_balancing && !var.create_blue_green_deploy_tgs ? aws_lb_target_group.lb_http_target_group[0].arn : null
+}
+
+output "target_group_blue_arn" {
+  description = "Arn of the ervice's blue target group"
+  value = var.create_load_balancing && var.create_blue_green_deploy_tgs ? aws_lb_target_group.lb_http_target_group_blue[0].arn : null
+}
+
+output "target_group_green_arn" {
+  description = "Arn of the ervice's green target group"
+  value = var.create_load_balancing && var.create_blue_green_deploy_tgs ? aws_lb_target_group.lb_http_target_group_green[0].arn : null
 }
 
 output "target_group_id" {
   description = "Id of the service's target group"
-  value = var.create_load_balancing ? aws_lb_target_group.lb_http_target_group[0].arn : null
+  value = var.create_load_balancing && !var.create_blue_green_deploy_tgs ? aws_lb_target_group.lb_http_target_group[0].id : null
+}
+
+output "target_group_blue_id" {
+  description = "Id of the service's blue target group"
+  value = var.create_load_balancing && var.create_blue_green_deploy_tgs ? aws_lb_target_group.lb_http_target_group_blue[0].id : null
+}
+
+output "target_group_green_id" {
+  description = "Id of the service's green target group"
+  value = var.create_load_balancing && var.create_blue_green_deploy_tgs ? aws_lb_target_group.lb_http_target_group_blue[0].id : null
 }
