@@ -29,7 +29,7 @@ data "aws_lb_listener" "selected" {
 }
 
 resource "aws_lb_target_group" "lb_http_target_group" {
-  count = var.create_load_balancing ? 1 : 0
+  count = var.create_load_balancing && !var.create_blue_green_deploy_tgs ? 1 : 0
   name = "tg-${local.service_name}"
   port     = var.tg_port
   protocol = var.tg_protocol
@@ -46,16 +46,73 @@ resource "aws_lb_target_group" "lb_http_target_group" {
 }
 
 resource "aws_lb_listener_rule" "endpoint_listener_rule" {
+  count = var.create_load_balancing && !var.create_blue_green_deploy_tgs ? 1 : 0
   depends_on = [
     aws_lb_target_group.lb_http_target_group[0]
   ]
-  count = var.create_load_balancing ? 1 : 0
   listener_arn = data.aws_lb_listener.selected[0].arn
   priority     = var.listener_priority
 
   action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.lb_http_target_group[0].arn
+  }
+
+  condition {
+    path_pattern {
+      values = var.path_patterns
+    }
+  }
+}
+
+resource "aws_lb_target_group" "lb_http_target_group_blue" {
+  count = var.create_load_balancing && var.create_blue_green_deploy_tgs ? 1 : 0
+  name = "tg-${local.service_name}-blue"
+  port     = var.tg_port
+  protocol = var.tg_protocol
+  vpc_id   = var.vpc_id
+  target_type = var.launch_type == "EC2" ? "instance" : "ip"
+  health_check {
+    path = var.tg_health_check_path
+    matcher = var.tg_health_check_matcher
+    interval = var.tg_health_check_interval
+    timeout = var.tg_health_check_timeout
+    healthy_threshold = var.tg_health_check_healthy_threshold 
+    unhealthy_threshold = var.tg_health_check_unhealthy_threshold 
+  }
+}
+
+resource "aws_lb_target_group" "lb_http_target_group_green" {
+  count = var.create_load_balancing && var.create_blue_green_deploy_tgs ? 1 : 0
+  name = "tg-${local.service_name}-green"
+  port     = var.tg_port
+  protocol = var.tg_protocol
+  vpc_id   = var.vpc_id
+  target_type = var.launch_type == "EC2" ? "instance" : "ip"
+  health_check {
+    path = var.tg_health_check_path
+    matcher = var.tg_health_check_matcher
+    interval = var.tg_health_check_interval
+    timeout = var.tg_health_check_timeout
+    healthy_threshold = var.tg_health_check_healthy_threshold 
+    unhealthy_threshold = var.tg_health_check_unhealthy_threshold 
+  }
+}
+
+resource "aws_lb_listener_rule" "endpoint_listener_rule_bg" {
+  count = var.create_load_balancing && var.create_blue_green_deploy_tgs ? 1 : 0
+  lifecycle { 
+    ignore_changes =  [action[0].target_group_arn] 
+  }
+  depends_on = [
+    aws_lb_target_group.lb_http_target_group[0]
+  ]
+  listener_arn = data.aws_lb_listener.selected[0].arn
+  priority     = var.listener_priority
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.lb_http_target_group_blue[0].arn
   }
 
   condition {
@@ -139,20 +196,37 @@ resource "aws_ecs_service" "service" {
   enable_ecs_managed_tags            = var.enable_ecs_managed_tags
   health_check_grace_period_seconds  = var.create_load_balancing ? var.health_check_grace_period_seconds : null
   launch_type                        = var.launch_type
-  // Deploy first time then ignore to be managed by deployment pipeline
-  // if desired 
+  enable_execute_command             = var.enable_execute_command
+
   lifecycle { 
-    ignore_changes = [task_definition]
+    ignore_changes = [task_definition, load_balancer]
   }
   
   dynamic "load_balancer" {
-    for_each = var.create_load_balancing ? [1] : []
+    for_each = var.create_load_balancing && !var.create_blue_green_deploy_tgs ? [1] : []
     content {
       target_group_arn = aws_lb_target_group.lb_http_target_group[0].arn
       container_name   = var.container_name
       container_port   = var.container_port
     }
   }
+
+  dynamic "load_balancer" {
+    for_each = var.create_load_balancing && var.create_blue_green_deploy_tgs ? [1] : []
+    content {
+      target_group_arn = aws_lb_target_group.lb_http_target_group_blue[0].arn
+      container_name   = var.container_name
+      container_port   = var.container_port
+    }
+  }
+
+  dynamic "deployment_controller" {
+     for_each = var.create_blue_green_deploy_tgs ? [1] : []
+    content {
+      type = "CODE_DEPLOY"
+    }
+  }
+
   dynamic "ordered_placement_strategy" {
     for_each = var.ordered_placement_strategy
     content {
@@ -183,6 +257,7 @@ resource "aws_ecs_service" "service" {
     content {
       subnets = var.network_configuration.subnets
       security_groups = var.network_configuration.security_groups
+      assign_public_ip = var.network_configuration.assign_public_ip
     }
   }
   task_definition = var.create_task_definition ? aws_ecs_task_definition.task_def[0].arn : var.task_definition_arn
