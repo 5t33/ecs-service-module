@@ -1,5 +1,5 @@
 resource "aws_appautoscaling_policy" "scale_down" {
-  count = var.create_autoscaling ? 1 : 0
+  count = var.step_scaling_policies != null ? 1 : 0
   name               = "appautoscale-${local.service_name}-${var.aws_short_region[var.aws_region]}-${var.environment}-scale-down"
   policy_type        = var.scaling_policy_type
   resource_id        = aws_appautoscaling_target.this[0].resource_id
@@ -23,7 +23,7 @@ resource "aws_appautoscaling_policy" "scale_down" {
 }
 
 resource "aws_appautoscaling_policy" "scale_up" {
-  count = var.create_autoscaling  ? 1 : 0
+  count = var.step_scaling_policies != null ? 1 : 0
   name               = "appautoscale-${local.service_name}-${var.aws_short_region[var.aws_region]}-${var.environment}-scale-up"
   policy_type        = var.scaling_policy_type
   resource_id        = aws_appautoscaling_target.this[0].resource_id
