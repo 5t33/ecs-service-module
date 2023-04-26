@@ -18,40 +18,40 @@ data "aws_caller_identity" "this" {}
 # AWS LOAD BALANCER
 #------------------------------------------------------------------------------
 data "aws_lb" "selected" {
-  count = var.create_load_balancing ? 1 : 0
-  name = var.lb_name
+  count = var.load_balancing != null ? 1 : 0
+  name = var.load_balancing.load_balancer_name
 }
 
 data "aws_lb_listener" "selected" {
-  count = var.create_load_balancing ? 1 : 0
+  count = var.load_balancing != null ? 1 : 0
   load_balancer_arn = data.aws_lb.selected[0].arn
-  port              = var.listener_port
+  port              = var.load_balancing.listener_port
 }
 
 resource "aws_lb_target_group" "lb_http_target_group" {
-  count = var.create_load_balancing && !var.create_blue_green_deploy_tgs ? 1 : 0
+  count = var.load_balancing != null && !var.create_blue_green_deploy_tgs ? 1 : 0
   name = "tg-${local.service_name}"
-  port     = var.tg_port
-  protocol = var.tg_protocol
+  port     = var.load_balancing.target_group.port
+  protocol = var.load_balancing.target_group.protocol
   vpc_id   = var.vpc_id
   target_type = var.launch_type == "EC2" ? "instance" : "ip"
   health_check {
-    path = var.tg_health_check_path
-    matcher = var.tg_health_check_matcher
-    interval = var.tg_health_check_interval
-    timeout = var.tg_health_check_timeout
-    healthy_threshold = var.tg_health_check_healthy_threshold 
-    unhealthy_threshold = var.tg_health_check_unhealthy_threshold 
+    path = var.load_balancing.target_group.health_check_path
+    matcher = var.load_balancing.target_group.health_check_matcher
+    interval = var.load_balancing.target_group.health_check_interval
+    timeout = var.load_balancing.target_group.health_check_timeout
+    healthy_threshold = var.load_balancing.target_group.health_check_healthy_threshold 
+    unhealthy_threshold = var.load_balancing.target_group.health_check_unhealthy_threshold 
   }
 }
 
 resource "aws_lb_listener_rule" "endpoint_listener_rule" {
-  count = var.create_load_balancing && !var.create_blue_green_deploy_tgs ? 1 : 0
+  count = var.load_balancing != null && !var.create_blue_green_deploy_tgs ? 1 : 0
   depends_on = [
     aws_lb_target_group.lb_http_target_group[0]
   ]
   listener_arn = data.aws_lb_listener.selected[0].arn
-  priority     = var.listener_priority
+  priority     = var.load_balancing.listener_priority
 
   action {
     type             = "forward"
@@ -60,47 +60,47 @@ resource "aws_lb_listener_rule" "endpoint_listener_rule" {
 
   condition {
     path_pattern {
-      values = var.path_patterns
+      values = var.load_balancing.path_patterns
     }
   }
 }
 
 resource "aws_lb_target_group" "lb_http_target_group_blue" {
-  count = var.create_load_balancing && var.create_blue_green_deploy_tgs ? 1 : 0
+  count = var.load_balancing != null && var.create_blue_green_deploy_tgs ? 1 : 0
   name = "tg-${local.service_name}-blue"
-  port     = var.tg_port
-  protocol = var.tg_protocol
+  port     = var.load_balancing.target_group.port
+  protocol = var.load_balancing.target_group.protocol
   vpc_id   = var.vpc_id
   target_type = var.launch_type == "EC2" ? "instance" : "ip"
   health_check {
-    path = var.tg_health_check_path
-    matcher = var.tg_health_check_matcher
-    interval = var.tg_health_check_interval
-    timeout = var.tg_health_check_timeout
-    healthy_threshold = var.tg_health_check_healthy_threshold 
-    unhealthy_threshold = var.tg_health_check_unhealthy_threshold 
+    path = var.load_balancing.target_group.health_check_path
+    matcher = var.load_balancing.target_group.health_check_matcher
+    interval = var.load_balancing.target_group.health_check_interval
+    timeout = var.load_balancing.target_group.health_check_timeout
+    healthy_threshold = var.load_balancing.target_group.health_check_healthy_threshold 
+    unhealthy_threshold = var.load_balancing.target_group.health_check_unhealthy_threshold 
   }
 }
 
 resource "aws_lb_target_group" "lb_http_target_group_green" {
-  count = var.create_load_balancing && var.create_blue_green_deploy_tgs ? 1 : 0
+  count = var.load_balancing != null && var.create_blue_green_deploy_tgs ? 1 : 0
   name = "tg-${local.service_name}-green"
-  port     = var.tg_port
-  protocol = var.tg_protocol
+  port     = var.load_balancing.target_group.port
+  protocol = var.load_balancing.target_group.protocol
   vpc_id   = var.vpc_id
   target_type = var.launch_type == "EC2" ? "instance" : "ip"
   health_check {
-    path = var.tg_health_check_path
-    matcher = var.tg_health_check_matcher
-    interval = var.tg_health_check_interval
-    timeout = var.tg_health_check_timeout
-    healthy_threshold = var.tg_health_check_healthy_threshold 
-    unhealthy_threshold = var.tg_health_check_unhealthy_threshold 
+    path = var.load_balancing.target_group.health_check_path
+    matcher = var.load_balancing.target_group.health_check_matcher
+    interval = var.load_balancing.target_group.health_check_interval
+    timeout = var.load_balancing.target_group.health_check_timeout
+    healthy_threshold = var.load_balancing.target_group.health_check_healthy_threshold 
+    unhealthy_threshold = var.load_balancing.target_group.health_check_unhealthy_threshold 
   }
 }
 
 resource "aws_lb_listener_rule" "endpoint_listener_rule_bg" {
-  count = var.create_load_balancing && var.create_blue_green_deploy_tgs ? 1 : 0
+  count = var.load_balancing != null && var.create_blue_green_deploy_tgs ? 1 : 0
   lifecycle { 
     ignore_changes =  [action[0].target_group_arn] 
   }
@@ -108,7 +108,7 @@ resource "aws_lb_listener_rule" "endpoint_listener_rule_bg" {
     aws_lb_target_group.lb_http_target_group[0]
   ]
   listener_arn = data.aws_lb_listener.selected[0].arn
-  priority     = var.listener_priority
+  priority     = var.load_balancing.listener_priority
 
   action {
     type             = "forward"
@@ -117,7 +117,7 @@ resource "aws_lb_listener_rule" "endpoint_listener_rule_bg" {
 
   condition {
     path_pattern {
-      values = var.path_patterns
+      values = var.load_balancing.path_patterns
     }
   }
 }
@@ -186,15 +186,16 @@ data "aws_ecs_cluster" "cluster" {
 }
 
 resource "aws_ecs_service" "service" {
+  count = !var.create_blue_green_deploy_tgs ? 1 : 0
   name                               = local.service_name
   # capacity_provider_strategy - (Optional) The capacity provider strategy to use for the service. Can be one or more. Defined below.
   cluster                            = data.aws_ecs_cluster.cluster.arn
-  iam_role                           = var.create_load_balancing && var.launch_type == "EC2" ? data.aws_iam_role.ecs_service_role.arn : null
+  iam_role                           = var.load_balancing != null && var.launch_type == "EC2" ? data.aws_iam_role.ecs_service_role.arn : null
   deployment_maximum_percent         = var.deployment_maximum_percent
   deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
   desired_count                      = var.desired_count
   enable_ecs_managed_tags            = var.enable_ecs_managed_tags
-  health_check_grace_period_seconds  = var.create_load_balancing ? var.health_check_grace_period_seconds : null
+  health_check_grace_period_seconds  = var.load_balancing != null ? var.health_check_grace_period_seconds : null
   launch_type                        = var.launch_type
   enable_execute_command             = var.enable_execute_command
 
@@ -203,27 +204,12 @@ resource "aws_ecs_service" "service" {
   }
   
   dynamic "load_balancer" {
-    for_each = var.create_load_balancing && !var.create_blue_green_deploy_tgs ? [1] : []
+    for_each = var.load_balancing != null ? [1] : []
     content {
+      // fix....
       target_group_arn = aws_lb_target_group.lb_http_target_group[0].arn
       container_name   = var.container_name
       container_port   = var.container_port
-    }
-  }
-
-  dynamic "load_balancer" {
-    for_each = var.create_load_balancing && var.create_blue_green_deploy_tgs ? [1] : []
-    content {
-      target_group_arn = aws_lb_target_group.lb_http_target_group_blue[0].arn
-      container_name   = var.container_name
-      container_port   = var.container_port
-    }
-  }
-
-  dynamic "deployment_controller" {
-     for_each = var.create_blue_green_deploy_tgs ? [1] : []
-    content {
-      type = "CODE_DEPLOY"
     }
   }
 
@@ -260,7 +246,82 @@ resource "aws_ecs_service" "service" {
       assign_public_ip = var.network_configuration.assign_public_ip
     }
   }
-  task_definition = var.create_task_definition ? aws_ecs_task_definition.task_def[0].arn : var.task_definition_arn
+  task_definition = var.task_definition == null ? aws_ecs_task_definition.task_def[0].arn : var.task_definition_arn
+  tags = merge({
+    Name = "${local.service_name}-ecs-tasks-sg"
+  }, var.tags)
+}
+
+
+resource "aws_ecs_service" "service_bg" {
+  count = var.create_blue_green_deploy_tgs ? 1 : 0
+  name                               = local.service_name
+  # capacity_provider_strategy - (Optional) The capacity provider strategy to use for the service. Can be one or more. Defined below.
+  cluster                            = data.aws_ecs_cluster.cluster.arn
+  iam_role                           = var.load_balancing != null && var.launch_type == "EC2" ? data.aws_iam_role.ecs_service_role.arn : null
+  deployment_maximum_percent         = var.deployment_maximum_percent
+  deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
+  desired_count                      = var.desired_count
+  enable_ecs_managed_tags            = var.enable_ecs_managed_tags
+  health_check_grace_period_seconds  = var.load_balancing != null ? var.health_check_grace_period_seconds : null
+  launch_type                        = var.launch_type
+  enable_execute_command             = var.enable_execute_command
+
+  lifecycle { 
+    ignore_changes = [task_definition, load_balancer]
+  }
+
+    dynamic "load_balancer" {
+    for_each = var.load_balancing != null ? [1] : []
+    content {
+      target_group_arn = aws_lb_target_group.lb_http_target_group_blue[0].arn
+      container_name   = var.container_name
+      container_port   = var.container_port
+    }
+  }
+
+  dynamic "deployment_controller" {
+    for_each = var.create_blue_green_deploy_tgs ? [1] : []
+    content {
+      type = "CODE_DEPLOY"
+    }
+  }
+
+  dynamic "ordered_placement_strategy" {
+    for_each = var.ordered_placement_strategy
+    content {
+      type  = ordered_placement_strategy.value.type
+      field = lookup(ordered_placement_strategy.value, "field", null)
+    }
+  }
+  dynamic "placement_constraints" {
+    for_each = var.placement_constraints
+    content {
+      expression = lookup(placement_constraints.value, "expression", null)
+      type       = placement_constraints.value.type
+    }
+  }
+  propagate_tags   = var.propagate_tags
+  dynamic "service_registries" {
+    for_each = var.service_registries != null ? [1] : []
+    content {
+      registry_arn   = service_registries.value.registry_arn
+      port           = service_registries.value.port
+      container_name = service_registries.value.container_name
+      container_port = service_registries.value.container_port
+    }
+  }
+
+  dynamic "network_configuration" {
+    // network_configuration is only needed for Fargate launch type
+    for_each = var.launch_type != "EC2" && var.network_configuration != null ? [1] : []
+    content {
+      subnets = var.network_configuration.subnets
+      security_groups = var.network_configuration.security_groups
+      assign_public_ip = var.network_configuration.assign_public_ip
+    }
+  }
+  task_definition = var.task_definition_arn == null ? aws_ecs_task_definition.task_def[0].arn : var.task_definition_arn
   tags = merge({
     Name = "${local.service_name}-ecs-tasks-sg"
   }, var.tags)

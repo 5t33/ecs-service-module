@@ -89,6 +89,17 @@ variable "ecs_cluster_name" {
   type = string
 }
 
+variable "container_name" {
+  description = "Name of container that will be running inside the task"
+  type = string
+}
+
+variable "container_port" {
+  description = "Container port."
+  type = number
+  default = 3001
+}
+
 variable "launch_type" {
   description = "ECS launch type"
   type = string
@@ -149,174 +160,19 @@ variable "propagate_tags" {
 
 variable "service_registries" {
   description = "(Optional) The service discovery registries for the service. The maximum number of service_registries blocks is 1. This is a map that should contain the following fields \"registry_arn\", \"port\", \"container_port\" and \"container_name\""
-  type        = map
-  default     = {}
+  type        = object({
+    registry_arn = string
+    port = optional(number, null)
+    container_name = optional(string, null)
+    container_port = optional(number, null)
+  })
+  default     = null
 }
 
 variable "log_retention_days" {
   description = "Log retention days for ecs service"
   type = number
   default = 30
-}
-
-variable "environment_variables" {
-  description = "Environment variables to provide to service"
-  type = list(object({
-    name = string
-    value = string
-  }))
-  default = []
-}
-
-variable "secrets" {
-  description = "Secrets to provide as variables to service via Secrets Manager or Parameter Store"
-  type = list(object({
-    name = string
-    valueFrom = string
-  }))
-  default = []
-}
-
-#------------------------------------------------------------------------------
-# AWS LOAD BALANCER
-#------------------------------------------------------------------------------
-
-variable "create_load_balancing" {
-  description = "whether or not to create load balancing for this service. If true a listener rule and target group will be created."
-  type = bool
-  default = true
-}
-
-variable "lb_name" {
-  description = "Name of LB to get listener arn from"
-  type = string
-  default = null
-}
-
-variable "listener_port" {
-  description = "Port that the listener will be listening on via he LB"
-  type = number
-  default = 80
-}
-
-variable "tg_port" {
-  description = "Port that ECS will recieve traffic on from the LB listener"
-  type        = string
-  default = 80
-}
-
-variable "tg_protocol" {
-  description = "Protocol that ECS will recieve traffic via the LB"
-  type        = string
-  default = "HTTP"
-}
-
-variable "tg_health_check_path" {
-  description = "Target group health check path"
-  type = string
-  default = "/"
-}
-
-variable "tg_health_check_timeout" {
-  description = "Target group health check timeout (must be less than interval)"
-  type = number
-  default = 2
-}
-
-variable "tg_health_check_interval" {
-  description = "Target group health check interval"
-  type = number
-  default = 5
-}
-
-variable "tg_health_check_unhealthy_threshold" {
-  description = "Unhealthy threshold for target group health check"
-  type = number
-  default = 2
-}
-
-variable "tg_health_check_healthy_threshold" {
-  description = "Healthy threshold for target group health check"
-  type = number
-  default = 10
-}
-
-variable "tg_health_check_matcher" {
-  description = "Status code for target group health check"
-  type = string
-  default = 200
-}
-
-variable "listener_protocol" {
-  description = "Protocol for LB listener"
-  type = string
-  default = "HTTP"
-}
-
-variable "listener_priority" {
-  description = "priority of endpiont listener" 
-  type = number
-  default = 1
-}
-
-variable "path_patterns" {
-  description = "Pattern for your service endpoint"
-  type = list(string)
-  default = []
-}
-
-#------------------------------------------------------------------------------
-# TASK DEFINITION
-#------------------------------------------------------------------------------
-
-variable "task_execution_role_arn" {
-  description = "Task execution role arn"
-  type = string
-  default = null
-}
-
-variable "task_definition_family" {
-  description = "The task definition family (the part before the number)"
-  type = string
-}
-
-variable "task_definition_arn" {
-  description = "(optional) Task definition ARN. Only used if create_task_definiton is false"
-  type = string
-  default = null
-}
-variable "container_name" {
-  description = "Name of container that will be running inside the task"
-  type = string
-}
-
-variable "container_image" {
-  description = "Image to be used by the container, e.g. 1234567891012.dkr.ecr.us-west-2.amazonaws.com/hello-world"
-  type = string
-}
-
-variable "container_port" {
-  description = "Container port."
-  type = number
-  default = 3001
-}
-
-variable "host_port" {
-  description = "Host port. Should be 0 for auto-port assignment." 
-  type = number
-  default = 0
-}
-
-variable "task_cpu" {
-  description = "CPU units to be used per task"
-  type = number
-  default = 128
-}
-
-variable "task_memory" {
-  description = "memory units to be used per task"
-  type = number
-  default = 128
 }
 
 variable "log_group" {
@@ -337,6 +193,123 @@ variable "tags" {
   default = {}
 }
 
+
+#------------------------------------------------------------------------------
+# AWS LOAD BALANCER
+#------------------------------------------------------------------------------
+
+variable "load_balancing" {
+  description = "Load balancing config. This assumes a load balancer already exists. It ill append the necessary listener rule."
+  type = object({
+    load_balancer_name = string
+    listener_port = number
+    listener_priority = optional(number, 1)
+    path_patterns = optional(list(string), ["/"])
+    target_group = optional(
+      object({
+        port = optional(number, 80)
+        protocol = optional(string, "HTTP")
+        health_check_path = optional(string, "/")
+        health_check_timeout = optional(number, 2)
+        health_check_interval = optional(number, 5)
+        health_check_unhealthy_threshold = optional(number, 3)
+        health_check_healthy_threshold = optional(number, 2)
+        health_check_matcher = optional(number, 200)
+      }), {
+        port = 80
+        protocol = "HTTP"
+        health_check_path = "/"
+        health_check_timeout = 2
+        health_check_interval = 5
+        health_check_unhealthy_threshold = 5
+        health_check_healthy_threshold = 10
+        health_check_matcher = 200
+      })
+  })
+  default = null
+}
+
+#------------------------------------------------------------------------------
+# TASK DEFINITION
+#------------------------------------------------------------------------------
+
+variable "task_definition_arn" {
+  type = string
+  default = null
+}
+
+variable "task_definition" {
+  type = object({
+    execution_role_arn = optional(string, null)
+    task_role_arn = optional(string, null)
+    family = string
+    ephemeral_storage = optional(object({
+      size_in_gib = number
+    }), null)
+    volumes = optional(
+      list(
+        object({
+          name = string
+          host_path = optional(string, null)
+          docker_volume_configuration = optional(object({
+            docker_volume_configuration = optional(bool, false)
+            driver_opts = optional(map(string), null)
+            driver = optional(string, null)
+            labels = optional(map(string), null)
+            scope = optional(string, null)
+          }), null)
+          efs_volume_configuration = optional(object({
+            file_system_id = string
+            root_directory = optional(string, null)
+            transit_encryption = optional(string, null)
+            transit_encryption_port = optional(number, null)
+            authorization_config = optional(object({
+              access_point_id = optional(string, null)
+              iam = optional(string, null)
+            }), null)
+          }), null)
+        })
+      ),
+      null
+    )
+    cpu = optional(number, null)
+    memory = optional(number, null)
+    container_definitions = list(
+      object({
+        essential = optional(bool, true)
+        container_name = optional(string, null)
+        container_image = optional(string, null)
+        command = optional(string, null)
+        cpu = optional(number, null)
+        memory = optional(number, null)
+        environment = list(object({
+          name = string
+          value = string
+        }))
+        secrets = list(object({
+          name = string
+          valueFrom = string
+        }))
+        protocol = optional(string, "tcp")
+        portMappings = optional(list(object({
+          containerPort: number,
+          hostPort: optional(number, null),
+          protocol: optional(string, "tcp")
+        })), null)
+        mountPoints = optional(list(object({
+          sourceVolume = string
+          containerPath = string
+          readOnly = optional(bool, false)
+        })),[])
+        volumesFrom = optional(list(object({
+          sourceContainer = string
+          readOnly = optional(bool, false)
+        })),[])
+      })
+    )
+  })
+  default = null
+}
 
 #------------------------------------------------------------------------------
 # AUTO SCALING
@@ -361,9 +334,9 @@ variable "scale_up_metric_alarms" {
       period = number
       evaluation_periods = number
       datapoints_to_alarm = number
-      dimensions = map(string)
+      dimensions = optional(map(string), {})
       namespace = string
-      tags = map(string)
+      tags = optional(map(string), {})
       metric_queries = list(object({
         id = string
         expression = string 
@@ -392,9 +365,9 @@ variable "scale_down_metric_alarms" {
     period = number
     evaluation_periods = number
     datapoints_to_alarm = number
-    dimensions = map(string)
+    dimensions = optional(map(string), {})
     namespace = string
-    tags = map(string)
+    tags = optional(map(string), {})
     metric_queries = list(object({
       id = string
       expression = string 
@@ -460,17 +433,6 @@ variable "service_min_task_count" {
   type        = number
   description = "The minimum value to scale to in response to a scale-in event. MinCapacity is required to register a scalable target."
   default     = 1
-}
-
-variable "create_autoscaling" {
-  type = bool
-  description = "Whether or not to create autoscaling for the service."
-  default = true
-}
-
-variable "create_task_definition" {
-  type = bool
-  default = true
 }
 
 variable "enable_execute_command" {

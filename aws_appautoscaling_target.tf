@@ -1,5 +1,5 @@
 resource "aws_appautoscaling_target" "this" {
-  count = var.create_autoscaling  ? 1 : 0
+  count = var.step_scaling_policies != null ? 1 : 0
   service_namespace  = "ecs"
   resource_id        = "service/${var.ecs_cluster_name}/${local.service_name}"
   scalable_dimension = "ecs:service:DesiredCount"
