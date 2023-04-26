@@ -389,7 +389,7 @@ module "hello-world" {
   create_blue_green_deploy_tgs = true
   ...
 }
-
+```
 This will ensure your service is created with two target groups that can be used as blue/green groups in codedeploy.
 
 
