@@ -29,7 +29,7 @@ locals {
 }
 
 module "hello-world" {
-    source      = "git@github.com:5t33/ecs-service-module?ref=v1.0"
+    source      = "git@github.com:5t33/ecs-service-module?ref=v1.0.0"
     environment = "tst"
     launch_type = "EC2"
     aws_region  = var.aws_region
@@ -215,7 +215,7 @@ locals {
 }
 
 module "hello-world" {
-    source      = "git@github.com:5t33/ecs-service-module?ref=v1.0"
+    source      = "git@github.com:5t33/ecs-service-module?ref=v1.0.0"
     environment = var.environment
     enable_execute_command = true
     launch_type = "FARGATE"
@@ -334,7 +334,7 @@ resource "aws_iam_policy" "task_policy" {
           "Resource": "*",
           "Condition": {
               "StringEquals": {
-                "ec2:Vpc": "vpc-053c9c7d",
+                "ec2:Vpc": "vpc-123456",
                 "ec2:Subnet": local.subnet_arns,
                 "ec2:AuthorizedService": "ecs.amazonaws.com"
               }
