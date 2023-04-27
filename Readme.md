@@ -411,7 +411,7 @@ module "hello-world" {
         metric_aggregation_type = "Average"
         cooldown = 60
         metric_interval_upper_bound = 0
-        scale_down_step = 1
+        scale_down_step = -1
       }
     }
     scale_up_metric_alarms = [
