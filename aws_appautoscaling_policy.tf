@@ -36,7 +36,7 @@ resource "aws_appautoscaling_policy" "scale_up" {
     metric_aggregation_type = var.step_scaling_policies.scale_up_policy.metric_aggregation_type
 
     step_adjustment {
-      metric_interval_upper_bound = var.step_scaling_policies.scale_up_policy.metric_interval_upper_bound
+      metric_interval_lower_bound = var.step_scaling_policies.scale_up_policy.metric_interval_lower_bound
       scaling_adjustment          = var.step_scaling_policies.scale_up_policy.scale_up_step
     }
   }
