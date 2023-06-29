@@ -200,7 +200,7 @@ resource "aws_ecs_service" "service" {
   enable_execute_command             = var.enable_execute_command
 
   lifecycle { 
-    ignore_changes = [task_definition, load_balancer]
+    ignore_changes = [task_definition, load_balancer, desired_count]
   }
   
   dynamic "load_balancer" {
@@ -268,7 +268,7 @@ resource "aws_ecs_service" "service_bg" {
   enable_execute_command             = var.enable_execute_command
 
   lifecycle { 
-    ignore_changes = [task_definition, load_balancer]
+    ignore_changes = [task_definition, load_balancer, desired_count]
   }
 
     dynamic "load_balancer" {

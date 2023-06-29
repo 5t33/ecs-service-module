@@ -409,7 +409,7 @@ variable "step_scaling_policies" {
       metric_adj_type = "ChangeInCapacity"
       metric_aggregation_type = "Average"
       cooldown = 60
-      metric_interval_upper_bound = 0
+      metric_interval_lower_bound = 0
       scale_up_step = 1
     }
     scale_down_policy = {
