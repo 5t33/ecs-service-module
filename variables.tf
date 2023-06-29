@@ -393,7 +393,7 @@ variable "step_scaling_policies" {
       metric_adj_type = string
       cooldown = number
       metric_aggregation_type = string
-      metric_interval_upper_bound = number
+      metric_interval_lower_bound = number
       scale_up_step = number
     })
     scale_down_policy = object({
