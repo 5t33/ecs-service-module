@@ -3,9 +3,54 @@
 Inspired by:
 * https://github.com/cn-terraform/terraform-aws-ecs-fargate-service
 
-## Important
+## Important Note
 
-This Terraform chart is opinionated in that it assumed you will be deploying your ECS service with some other method e.g. AWS CodeDeploy or https://github.com/silinternational/ecs-deploy
+This Terraform chart is opinionated in that it assumed you will be deploying your ECS service with some other method e.g. AWS CodeDeploy or https://github.com/silinternational/ecs-deploy. So, the task definition is ignored (in the service) after the initial deployment. If you change the task definiton, it will create a new definition in the state, but it will not be updated in the service (which would create a rolling deployment).
+
+Additionally, the module accepts a camel-cased task definition, instead of the typical Terraform underscore. This is so a JSON task definition can be used like so:
+```
+module "service" {
+    ...
+    task_definition = jsondecode(templatefile("${path.module}/task-definition.json", {
+      ENV = var.environment,
+      ACCOUNT_ID = local.account_id,
+      FRONTEND_DOMAIN = local.frontend_domain,
+      BACKEND_DOMAIN = local.backend_domain,
+      IMAGE = "<account id>.dkr.ecr.us-west-2.amazonaws.com/<image name>:latest"
+    }))
+    ...
+}
+```
+This allows you to use the same task definition file in a deploy script. 
+```
+deploy_with_codedeploy() {
+  ENV=$1
+  DEPLOY_COMMIT=$2
+  if [ ! -z "$DEPLOY_COMMIT" ];
+  then
+    MAIN_CONTAINS_COMMIT=$(git branch --contains $DEPLOY_COMMIT | grep main | wc -l)
+    if [ "$ENV" == "prd" ] && [ $MAIN_CONTAINS_COMMIT != 1 ]; then print_error_and_exit "Commit $DEPLOY_COMMIT not contained in main. Only main can be deployed to production."; fi 
+  fi
+
+  ACCOUNT_ID=$(aws sts get-caller-identity | jq ".Account" | sed s/\"//g)
+  if [ ! -z $DEPLOY_COMMIT ]; then IMAGE="<IMG ACCOUNT ID>.dkr.ecr.us-west-2.amazonaws.com\/<YOUR IMAGE>:$DEPLOY_COMMIT"; else IMAGE="<IMG ACCOUNT ID>.dkr.ecr.us-west-2.amazonaws.com\/<YOUR IMAGE>:latest"; fi
+
+  NEW_TASK_DEFINITION=$(\
+    cat infrastructure/task-definition.json \
+    | sed s/\${ENV}/$ENV/g \
+    | sed s/\${ACCOUNT_ID}/$ACCOUNT_ID/g \
+    | sed s/\${IMAGE}/$IMAGE/g \
+  )
+  if [ "$?" != "0" ]; then print_error_and_exit "Failed to generate task definition JSON"; fi
+  NEW_TASK_DEFINITION_ARN=$(aws ecs register-task-definition --region us-west-2  --cli-input-json "$NEW_TASK_DEFINITION" | jq ".taskDefinition.taskDefinitionArn" | sed s/\"//g)
+  if [ "$?" != "0" ]; then print_error_and_exit "Failed to create new task definition"; fi
+  APPSPEC=$(echo "{\"version\":1,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::ECS::Service\",\"Properties\":{\"TaskDefinition\":\"${NEW_TASK_DEFINITION_ARN}\",\"LoadBalancerInfo\":{\"ContainerName\":\"<YOUR APPLICATION>-${ENV}\",\"ContainerPort\":3500}}}}]}" | jq -Rs .)
+  REVISION='{"revisionType":"AppSpecContent","appSpecContent":{"content":'${APPSPEC}'}}'
+  aws deploy --region us-west-2 create-deployment --application-name "<YOUR APPLICATION>-$ENV" --deployment-group-name "<YOUR APPLICATION>-$ENV" --revision "$REVISION"
+}
+```
+
+Using this strategy, don't need to define your task definition twice - once in Terraform and once in a deploy script. It's also better than https://github.com/silinternational/ecs-deploy because it allows you to change the environment variables on deployment - instead of only preserving the ones that already exist in the current task definition.
 
 ## Examples
 
@@ -57,12 +102,12 @@ module "hello-world" {
     container_port = 3500
     task_definition = {
       family = "myorg"
-      execution_role_arn = aws_iam_role.task_role.arn
+      executionRoleArn = aws_iam_role.task_role.arn
       cpu = 128
       memory = 128
-      container_definitions = [
+      containerDefinitions = [
         {
-          container_image = local.container_image
+          image = local.container_image
           environment = [
             {
               name = "BACKEND_DOMAIN",
@@ -241,12 +286,12 @@ module "hello-world" {
     container_port = 3500
     task_definition = {
       family = "myorg"
-      execution_role_arn = aws_iam_role.task_role.arn
+      executionRoleArn = aws_iam_role.task_role.arn
       cpu = 512
       memory = 1024
-      container_definitions = [
+      containerDefinitions = [
         {
-          container_image = local.container_image
+          image = local.container_image
           environment = [
             {
               name = "BACKEND_DOMAIN",

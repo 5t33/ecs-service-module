@@ -240,62 +240,55 @@ variable "task_definition_arn" {
 
 variable "task_definition" {
   type = object({
-    execution_role_arn = optional(string, null)
-    task_role_arn = optional(string, null)
+    executionRoleArn = optional(string, null)
+    taskRoleArn = optional(string, null)
     family = string
-    ephemeral_storage = optional(object({
-      size_in_gib = number
+    ephemeralStorage = optional(object({
+      sizeInGiB = number
     }), null)
     volumes = optional(
       list(
         object({
           name = string
-          host_path = optional(string, null)
-          docker_volume_configuration = optional(object({
-            docker_volume_configuration = optional(bool, false)
-            driver_opts = optional(map(string), null)
-            driver = optional(string, null)
-            labels = optional(map(string), null)
-            scope = optional(string, null)
-          }), null)
+          hostPath = optional(string, null)
           efs_volume_configuration = optional(object({
-            file_system_id = string
-            root_directory = optional(string, null)
-            transit_encryption = optional(string, null)
-            transit_encryption_port = optional(number, null)
-            authorization_config = optional(object({
-              access_point_id = optional(string, null)
+            fileSystemId = string
+            rootDirectory = optional(string, null)
+            transitEncryption = optional(string, null)
+            transitEncryptionPort = optional(number, null)
+            authorizationConfig = optional(object({
+              accessPointId = optional(string, null)
               iam = optional(string, null)
             }), null)
           }), null)
         })
       ),
-      null
+      []
     )
     cpu = optional(number, null)
     memory = optional(number, null)
-    container_definitions = list(
+    containerDefinitions = list(
       object({
         essential = optional(bool, true)
-        container_name = optional(string, null)
-        container_image = optional(string, null)
+        name = optional(string, null)
+        image = optional(string, null)
         command = optional(string, null)
         cpu = optional(number, null)
         memory = optional(number, null)
-        environment = list(object({
+        environment = optional(list(object({
           name = string
           value = string
-        }))
-        secrets = list(object({
+        })))
+        secrets = optional(list(object({
           name = string
           valueFrom = string
-        }))
+        })))
         protocol = optional(string, "tcp")
         portMappings = optional(list(object({
           containerPort: number,
           hostPort: optional(number, null),
           protocol: optional(string, "tcp")
-        })), null)
+        })), [])
         mountPoints = optional(list(object({
           sourceVolume = string
           containerPath = string

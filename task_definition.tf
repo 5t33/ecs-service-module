@@ -6,8 +6,8 @@ data "aws_ecs_task_definition" "task_def" {
 
 resource "aws_ecs_task_definition" "task_def" {
   count = var.task_definition == null ? 0 : 1
-  execution_role_arn = var.task_definition.execution_role_arn
-  task_role_arn = var.task_definition.task_role_arn == null ? var.task_definition.execution_role_arn : var.task_definition.task_role_arn
+  execution_role_arn = var.task_definition.executionRoleArn
+  task_role_arn = var.task_definition.taskRoleArn == null ? var.task_definition.executionRoleArn : var.task_definition.taskRoleArn
   family = var.task_definition.family
   network_mode = var.launch_type == "EC2" ? "bridge" : "awsvpc"
   requires_compatibilities = var.launch_type == "EC2" ? [] : ["FARGATE"]
@@ -15,39 +15,38 @@ resource "aws_ecs_task_definition" "task_def" {
   cpu = var.launch_type == "EC2" ? null: var.task_definition.cpu
   memory = var.launch_type == "EC2" ? null: var.task_definition.memory
   dynamic "ephemeral_storage" {
-    for_each = var.task_definition.ephemeral_storage != null ? [var.task_definition.ephemeral_storage] : []
+    for_each = var.task_definition.ephemeralStorage != null ? [var.task_definition.ephemeralStorage] : []
     content {
-      size_in_gib = var.task_definition.ephemeral_storage.size_in_gib
+      size_in_gib = var.task_definition.ephemeralStorage.sizeInGiB
     }
   }
   dynamic "volume" {
-    for_each = var.task_definition.volumes != null ? [var.task_definition.volumes] : []
+    for_each = var.task_definition.volumes
     content {
       name = volume.value.name
       dynamic "efs_volume_configuration" {
         for_each = volume.value.efs_volume_configuration == null ? [] : [volume.value.efs_volume_configuration]
         content {
-          file_system_id = efs_volume_configuration.value.file_system_id
-          root_directory = efs_volume_configuration.value.root_directory
-          transit_encryption = efs_volume_configuration.value.transit_encryption
-          transit_encryption_port = efs_volume_configuration.value.transit_encryption_port
+          file_system_id = efs_volume_configuration.value.fileSystemId
+          root_directory = efs_volume_configuration.value.rootDirectory
+          transit_encryption = efs_volume_configuration.value.transitEncryption
+          transit_encryption_port = efs_volume_configuration.value.transitEncryptionPort
           dynamic "authorization_config" {
-            for_each = efs_volume_configuration.value.authorization_config == null ? [] : [efs_volume_configuration.value.authorization_config]
+            for_each = efs_volume_configuration.value.authorizationConfig == null ? [] : [efs_volume_configuration.value.authorization_config]
             content {
-              access_point_id = authorization_config.value.access_point_id
+              access_point_id = authorization_config.value.accessPointId
               iam = authorization_config.value.iam
             }
           } 
         }
       }
-      # docker_volume_configuration = volume.value.docker_volume_configuration
-      host_path = volume.value.host_path
+      host_path = volume.value.hostPath
     }
   }
   container_definitions = jsonencode([
-    for container_definition in var.task_definition.container_definitions: {
-        "name" = container_definition.container_name == null ? var.container_name : container_definition.container_name,
-        "image" = container_definition.container_image,
+    for container_definition in var.task_definition.containerDefinitions: {
+        "name" = container_definition.name == null ? var.container_name : container_definition.name,
+        "image" = container_definition.image,
         "command" = container_definition.command,
         "essential" = container_definition.essential
         # "command": ["bash", "-c", "while true;do echo \"sleeping\"; sleep 10; done;"],
