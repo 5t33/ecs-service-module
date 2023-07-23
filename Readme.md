@@ -21,7 +21,7 @@ module "service" {
     ...
 }
 ```
-This allows you to use the same task definition file in a deploy script. 
+This allows you to use the same task definition file in a deploy script, which might look like this:
 ```
 deploy_with_codedeploy() {
   ENV=$1
@@ -49,8 +49,113 @@ deploy_with_codedeploy() {
   aws deploy --region us-west-2 create-deployment --application-name "<YOUR APPLICATION>-$ENV" --deployment-group-name "<YOUR APPLICATION>-$ENV" --revision "$REVISION"
 }
 ```
+example task definition json:
+```
+{
+  "containerDefinitions": [
+    {
+      "name": "<APP NAME>-${ENV}",
+      "image": "${IMAGE}",
+      "portMappings": [
+        {
+          "containerPort": 3500,
+          "hostPort": 3500,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "${ENV}"
+        },
+        {
+          "name": "APP_NAME",
+          "value": "<APP NAME>"
+        }
+      ],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "secrets": [
+        {
+          "name": "DATABASE_PASSWORD",
+          "valueFrom": "/museflow/${ENV}/aurora-rds/<APP NAME>-${ENV}/app_password"
+        },
+        {
+          "name": "DATABASE_USERNAME",
+          "valueFrom": "/museflow/${ENV}/aurora-rds/<APP NAME>-${ENV}/app_username"
+        },
+        {
+          "name": "DATABASE_HOST",
+          "valueFrom": "/museflow/${ENV}/aurora-rds/<APP NAME>-${ENV}/rw-endpoint"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "ecs/<APP NAME>-usw2-${ENV}",
+          "awslogs-region": "us-west-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "dependsOn": [{
+				"containerName": "aws-otel-collector",
+				"condition": "START"
+			}]
+    },
+    {
+      "name": "aws-otel-collector",
+      "image": "public.ecr.aws/aws-observability/aws-otel-collector:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 2000,
+          "hostPort": 2000,
+          "protocol": "udp"
+        },
+        {
+          "containerPort": 4317,
+          "hostPort": 4317,
+          "protocol": "tcp"
+        },
+        {
+          "containerPort": 4318,
+          "hostPort": 4318,
+          "protocol": "tcp"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-create-group": "True",
+          "awslogs-group": "/ecs/ecs-aws-otel-sidecar-collector",
+          "awslogs-region": "us-west-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "secrets": [
+        {
+          "name": "AOT_CONFIG_CONTENT",
+          "valueFrom": "/<org name>/${ENV}/otel/config"
+        }
+      ]
+    }
+  ],
+  "family": "museflow",
+  "taskRoleArn": "arn:aws:iam::${ACCOUNT_ID}:role/...",
+  "executionRoleArn": "arn:aws:iam::${ACCOUNT_ID}:role/...",
+  "networkMode": "awsvpc",
+  "volumes": [],
+  "placementConstraints": [],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "512",
+  "memory": "1024"
+}
+```
 
-Using this strategy, don't need to define your task definition twice - once in Terraform and once in a deploy script. It's also better than https://github.com/silinternational/ecs-deploy because it allows you to change the environment variables on deployment - instead of only preserving the ones that already exist in the current task definition.
+Using this strategy, you don't need to define your task definition twice - once in Terraform and once in a deploy script. It's also better than https://github.com/silinternational/ecs-deploy because it allows you to change the environment variables on deployment - instead of only preserving the ones that already exist in the current task definition.
 
 ## Examples
 
