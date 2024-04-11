@@ -246,6 +246,10 @@ variable "task_definition" {
     ephemeralStorage = optional(object({
       sizeInGiB = number
     }), null)
+    runtimePlatform = optional(object({
+      operatingSystemFamily = optional(string, null)
+      cpuArchitecture = optional(string, null)
+    }), null)
     volumes = optional(
       list(
         object({
@@ -441,4 +445,9 @@ variable "task_role_arn" {
 variable "create_blue_green_deploy_tgs" {
   type = bool
   default = false
+}
+
+variable "runtime_platform" {
+  type = map(string)
+  default = null
 }

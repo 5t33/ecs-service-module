@@ -14,6 +14,13 @@ resource "aws_ecs_task_definition" "task_def" {
   // Fargate requires that 'cpu' be defined at the task level.
   cpu = var.launch_type == "EC2" ? null: var.task_definition.cpu
   memory = var.launch_type == "EC2" ? null: var.task_definition.memory
+  dynamic "runtime_platform" {
+    for_each = var.task_definition.runtimePlatform != null ? [var.task_definition.ephemeralStorage] : []
+    content {
+      operating_system_family = var.task_definition.runtimePlatform.operatingSystemFamily
+      cpu_architecture = var.task_definition.runtimePlatform.cpuArchitecture
+    }
+  }
   dynamic "ephemeral_storage" {
     for_each = var.task_definition.ephemeralStorage != null ? [var.task_definition.ephemeralStorage] : []
     content {
